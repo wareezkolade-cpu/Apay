@@ -1,0 +1,63 @@
+<script src="assests/js/app.js"></script>
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>AOS.init({ offset:300, duration:1000 });</script>
+
+<script>
+    let balance = parseInt(localStorage.getItem('opay_wallet')) || 20000;
+    let transactions = JSON.parse(localStorage.getItem('opay_txs')) || [{type: 'Credit', amount: 20000, desc: 'Initial Funding'}];
+    const balanceEl = document.getElementById('walletBalance');
+    const txsEl = document.getElementById('txs');
+    let isHidden = false;
+
+    function render() {
+        balanceEl.textContent = isHidden ? '₦****' : `₦${balance.toLocaleString('en-NG')}.00`;
+        document.getElementById('modalBalance').textContent = `₦${balance.toLocaleString('en-NG')}.00`;
+        txsEl.innerHTML = transactions.slice(-3).reverse().map(t => `
+            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.2);">
+                <span>${t.type === 'Credit' ? '🟢' : '🔴'} ${t.desc}</span>
+                <span style="font-weight:700;">${t.type === 'Credit' ? '+' : '-'}₦${t.amount.toLocaleString()}</span>
+            </div>
+        `).join('');
+        localStorage.setItem('opay_wallet', balance);
+        localStorage.setItem('opay_txs', JSON.stringify(transactions));
+    }
+
+    function addFunds(amount) {
+        balance += amount;
+        transactions.push({type: 'Credit', amount, desc: 'Wallet Funding'});
+        render();
+    }
+
+    function openWithdraw() {
+        document.getElementById('withdrawModal').style.display = 'flex';
+        document.getElementById('errorMsg').style.display = 'none';
+        render();
+    }
+    function closeWithdraw() {
+        document.getElementById('withdrawModal').style.display = 'none';
+    }
+
+    function confirmWithdraw() {
+        const amount = parseInt(document.getElementById('withdrawAmount').value);
+        const error = document.getElementById('errorMsg');
+        
+        if(!amount || amount <= 0){ error.textContent = 'Enter valid amount'; error.style.display='block'; return; }
+        if(amount > balance){ error.textContent = 'Insufficient balance'; error.style.display='block'; return; }
+        if(amount < 100){ error.textContent = 'Minimum withdrawal ₦100'; error.style.display='block'; return; }
+
+        balance -= amount;
+        transactions.push({type: 'Debit', amount, desc: 'Transfer to Bank'});
+        render();
+        closeWithdraw();
+        document.getElementById('withdrawAmount').value = '';
+        alert(`Success! ₦${amount.toLocaleString()} withdrawn. OPay - No failure!`);
+    }
+
+    document.getElementById('toggleEye').addEventListener('click', (e) => {
+        isHidden = !isHidden;
+        e.target.className = isHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+        render();
+    });
+
+    render();
+</script>
